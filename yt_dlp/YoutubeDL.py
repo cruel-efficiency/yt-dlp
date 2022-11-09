@@ -26,7 +26,7 @@ from string import ascii_letters
 from .cache import Cache
 from .compat import compat_os_name, compat_shlex_quote
 from .cookies import load_cookies
-from .downloader import FFmpegFD, get_suitable_downloader, shorten_protocol_name
+from .downloader import DashSegmentsFD, FFmpegFD, get_suitable_downloader, shorten_protocol_name
 from .downloader.rtmp import rtmpdump_version
 from .extractor import gen_extractor_classes, get_info_extractor
 from .extractor.common import UnsupportedURLIE
@@ -3088,7 +3088,7 @@ class YoutubeDL:
                 fd, success = None, True
                 if info_dict.get('protocol') or info_dict.get('url'):
                     fd = get_suitable_downloader(info_dict, self.params, to_stdout=temp_filename == '-')
-                    if fd is not FFmpegFD and (
+                    if fd not in (FFmpegFD, DashSegmentsFD) and (
                             info_dict.get('section_start') or info_dict.get('section_end')):
                         msg = ('This format cannot be partially downloaded' if FFmpegFD.available()
                                else 'You have requested downloading the video partially, but ffmpeg is not installed')

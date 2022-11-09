@@ -1,3 +1,4 @@
+from cmath import inf
 import time
 
 from . import get_suitable_downloader
@@ -23,7 +24,7 @@ class DashSegmentsFD(FragmentFD):
 
         requested_formats = [{**info_dict, **fmt} for fmt in info_dict.get('requested_formats', [])]
         args = []
-        for fmt in requested_formats or [info_dict]:
+        for fmt in requested_formats or info_dict.get('formats'):
             try:
                 fragment_count = 1 if self.params.get('test') else len(fmt['fragments'])
             except TypeError:
@@ -32,6 +33,8 @@ class DashSegmentsFD(FragmentFD):
                 'filename': fmt.get('filepath') or filename,
                 'live': 'is_from_start' if fmt.get('is_from_start') else fmt.get('is_live'),
                 'total_frags': fragment_count,
+                'section_start': info_dict.get('section_start') or 0,
+                'section_end': info_dict.get('section_end') or inf
             }
 
             if real_downloader:
@@ -62,10 +65,16 @@ class DashSegmentsFD(FragmentFD):
         fragments = self._resolve_fragments(fmt['fragments'], ctx)
 
         frag_index = 0
+        scanned_time = 0
         for i, fragment in enumerate(fragments):
             frag_index += 1
             if frag_index <= ctx['fragment_index']:
                 continue
+            if (fragment.get('duration')):
+                scanned_time += fragment['duration']
+                if scanned_time < ctx['section_start'] or scanned_time > ctx['section_end']:
+                    continue
+
             fragment_url = fragment.get('url')
             if not fragment_url:
                 assert fragment_base_url

@@ -6,14 +6,17 @@ def get_suitable_downloader(info_dict, params={}, default=NO_DEFAULT, protocol=N
     info_copy = info_dict.copy()
     info_copy['to_stdout'] = to_stdout
 
+    print (info_copy['protocol'])
     protocols = (protocol or info_copy['protocol']).split('+')
     downloaders = [_get_suitable_downloader(info_copy, proto, params, default) for proto in protocols]
 
+    print (downloaders, protocols)
     if set(downloaders) == {FFmpegFD} and FFmpegFD.can_merge_formats(info_copy, params):
         return FFmpegFD
-    elif (set(downloaders) == {DashSegmentsFD}
-          and not (to_stdout and len(protocols) > 1)
-          and set(protocols) == {'http_dash_segments_generator'}):
+    elif (set(downloaders) == {DashSegmentsFD}):
+        # TODO wtf why is this fucked up.
+        #   and not (to_stdout and len(protocols) > 1)
+        #   and set(protocols) == {'http_dash_segments_generator'}):
         return DashSegmentsFD
     elif len(downloaders) == 1:
         return downloaders[0]
@@ -86,8 +89,12 @@ def _get_suitable_downloader(info_dict, protocol, params, default):
     if default is NO_DEFAULT:
         default = HttpFD
 
-    if (info_dict.get('section_start') or info_dict.get('section_end')) and FFmpegFD.can_download(info_dict):
-        return FFmpegFD
+    if (info_dict.get('section_start') or info_dict.get('section_end')):
+        if protocol not in ('m3u8', 'm3u8_native', 'http_dash_segments'):
+            if FFmpegFD.can_download(info_dict):
+                return FFmpegFD
+        else:
+            return DashSegmentsFD
 
     info_dict['protocol'] = protocol
     downloaders = params.get('external_downloader')
